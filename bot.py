@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord.ui import View, Button, Modal, TextInput
 import os
 
+# ---------------- INTENTS ----------------
 intents = discord.Intents.default()
 intents.members = True
 intents.voice_states = True
@@ -10,27 +11,23 @@ intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-CANAL_ACTIVADOR_ID = 1476409404415807599
+CANAL_ACTIVADOR_ID = 1476409404415807599  # Cambia por tu canal activador
 LIMITE_DEFAULT = 5
 
-salas = {}
-# {voice_id: {"owner": user_id, "text": text_channel_id}}
+salas = {}  # {voice_id: {"owner": user_id, "text": text_channel_id}}
 
 # ---------------- PANEL ----------------
-
 class Panel(View):
     def __init__(self):
-        super().__init__(timeout=None)
+        super().__init__(timeout=None)  # nunca caduca
 
     async def verificar_dueno(self, interaction):
         user = interaction.user
-
         if not user.voice:
             await interaction.response.send_message("❌ No estás en una sala.", ephemeral=True)
             return None
 
         canal = user.voice.channel
-
         if canal.id in salas and salas[canal.id]["owner"] == user.id:
             return canal
 
@@ -68,11 +65,9 @@ class Panel(View):
 
             await canal.delete()
             salas.pop(canal.id)
-
             await interaction.response.send_message("🗑️ Sala eliminada.", ephemeral=True)
 
 # ---------------- MODALES ----------------
-
 class RenombrarModal(Modal):
     def __init__(self, canal):
         super().__init__(title="Renombrar Sala")
@@ -100,20 +95,18 @@ class LimiteModal(Modal):
             await interaction.response.send_message("❌ Debes escribir solo números.", ephemeral=True)
 
 # ---------------- BOT READY ----------------
-
 @bot.event
 async def on_ready():
-    bot.add_view(Panel())
+    panel = Panel()
+    panel.is_persistent = True  # ❌ ahora la vista es persistente
+    bot.add_view(panel)
     print(f"Bot conectado como {bot.user}")
 
 # ---------------- EVENTO VOICE ----------------
-
 @bot.event
 async def on_voice_state_update(member, before, after):
-
-    # CREAR SALA
+    # 🔥 CREAR SALA
     if after.channel is not None and after.channel.id == CANAL_ACTIVADOR_ID:
-
         guild = after.channel.guild
         nombre = f"{member.display_name}-sala"
 
@@ -136,37 +129,23 @@ async def on_voice_state_update(member, before, after):
             overwrites=overwrites
         )
 
-        salas[voice.id] = {
-            "owner": member.id,
-            "text": text.id
-        }
+        salas[voice.id] = {"owner": member.id, "text": text.id}
 
         await text.send(
             f"🎉 Bienvenido {member.mention}\nAdministra tu sala con los botones:",
             view=Panel()
         )
 
-    # ELIMINAR SI QUEDA VACÍA
+    # 🔥 ELIMINAR SALA VACÍA
     if before.channel is not None and before.channel.id in salas:
-
         canal = before.channel
-
         if len(canal.members) == 0:
-
             text_id = salas[canal.id]["text"]
             text_channel = bot.get_channel(text_id)
-
             if text_channel:
                 await text_channel.delete()
-
             await canal.delete()
             salas.pop(canal.id)
 
 # ---------------- INICIAR BOT ----------------
-
-TOKEN = os.getenv("TOKEN")
-
-if TOKEN is None:
-    print("❌ No se encontró la variable TOKEN.")
-else:
-    bot.run(TOKEN)
+bot.run(os.getenv("TOKEN"))
