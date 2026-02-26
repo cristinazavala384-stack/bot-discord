@@ -97,9 +97,9 @@ class LimiteModal(Modal):
 # ---------------- BOT READY ----------------
 @bot.event
 async def on_ready():
-    panel = Panel()
-    panel.is_persistent = True  # ❌ ahora la vista es persistente
-    bot.add_view(panel)
+    panel = Panel()            # ✅ crear objeto Panel
+    panel.is_persistent = True # ✅ marcar persistente
+    bot.add_view(panel)        # ✅ añadir la vista al bot
     print(f"Bot conectado como {bot.user}")
 
 # ---------------- EVENTO VOICE ----------------
